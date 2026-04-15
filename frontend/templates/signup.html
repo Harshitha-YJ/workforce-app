@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WorkForce — Sign Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg:#0a0a0f; --surface:#13131a; --border:#1e1e2e;
+      --accent:#6c63ff; --accent2:#ff6584; --text:#e8e8f0;
+      --muted:#6b6b80; --success:#43e97b;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+    .panel-left {
+      flex:1; position:relative; display:flex; flex-direction:column;
+      justify-content:center; padding:60px; overflow:hidden;
+    }
+    .panel-left::before {
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse at 30% 50%, rgba(108,99,255,0.12) 0%, transparent 70%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.08) 0%, transparent 50%);
+    }
+    .grid-bg {
+      position:absolute; inset:0;
+      background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+                         linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+      background-size:40px 40px;
+    }
+    .logo { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; position:relative; z-index:1; }
+    .logo span { color:var(--accent); }
+    .tagline { margin-top:40px; position:relative; z-index:1; }
+    .tagline h1 { font-family:'Syne',sans-serif; font-size:2.6rem; font-weight:700; line-height:1.2; letter-spacing:-1px; }
+    .tagline h1 em { font-style:normal; color:var(--accent); }
+    .tagline p { margin-top:14px; color:var(--muted); font-size:0.95rem; line-height:1.7; max-width:380px; }
+
+    .steps-list { margin-top:48px; position:relative; z-index:1; display:flex; flex-direction:column; gap:16px; }
+    .step-row { display:flex; align-items:flex-start; gap:14px; }
+    .step-num { width:28px; height:28px; border-radius:50%; background:rgba(108,99,255,0.2); color:var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:700; flex-shrink:0; margin-top:2px; }
+    .step-text .title { font-size:0.88rem; font-weight:500; }
+    .step-text .desc  { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+
+    /* Right form panel */
+    .panel-right {
+      width:460px; background:var(--surface); border-left:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; padding:48px 48px;
+    }
+    .form-box { width:100%; }
+    .form-box h2 { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:700; }
+    .form-box .sub { color:var(--muted); font-size:0.85rem; margin-top:6px; }
+
+    .fg { margin-top:20px; }
+    .fg label { display:block; font-size:0.72rem; font-weight:500; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:7px; }
+    .fg input {
+      width:100%; background:var(--bg); border:1px solid var(--border);
+      border-radius:10px; padding:13px 16px; color:var(--text);
+      font-family:'DM Sans',sans-serif; font-size:0.92rem; outline:none; transition:border-color 0.2s;
+    }
+    .fg input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,99,255,0.1); }
+    .fg input::placeholder { color:var(--muted); }
+
+    .fg .hint { font-size:0.73rem; color:var(--muted); margin-top:6px; }
+    .fg .hint.info { color:var(--accent); background:rgba(108,99,255,0.08); border-radius:6px; padding:5px 9px; }
+    .fg .hint.warn { color:var(--accent2); background:rgba(255,101,132,0.08); border-radius:6px; padding:5px 9px; }
+
+    .btn-signup {
+      margin-top:28px; width:100%; background:var(--accent); color:white;
+      border:none; border-radius:10px; padding:14px;
+      font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:600;
+      cursor:pointer; transition:all 0.2s;
+    }
+    .btn-signup:hover { background:#7b73ff; box-shadow:0 8px 24px rgba(108,99,255,0.35); }
+    .btn-signup.loading { opacity:0.6; pointer-events:none; }
+
+    .err-msg {
+      margin-top:14px; background:rgba(255,101,132,0.1); border:1px solid rgba(255,101,132,0.3);
+      border-radius:8px; padding:10px 14px; color:var(--accent2); font-size:0.83rem; display:none;
+    }
+    .err-msg.show { display:block; }
+    .success-msg {
+      margin-top:14px; background:rgba(67,233,123,0.1); border:1px solid rgba(67,233,123,0.3);
+      border-radius:8px; padding:10px 14px; color:var(--success); font-size:0.83rem; display:none;
+    }
+    .success-msg.show { display:block; }
+
+    .login-link { margin-top:20px; text-align:center; font-size:0.82rem; color:var(--muted); }
+    .login-link a { color:var(--accent); text-decoration:none; font-weight:500; }
+
+    @media (max-width:768px) { .panel-left { display:none; } .panel-right { width:100%; } }
+  </style>
+</head>
+<body>
+  <div class="panel-left">
+    <div class="grid-bg"></div>
+    <div class="logo">Work<span>Force</span></div>
+    <div class="tagline">
+      <h1>Join your<br>team on<br><em>WorkForce</em></h1>
+      <p>Create your employee account to track your attendance, apply for leaves, and view your personal dashboard.</p>
+    </div>
+    <div class="steps-list">
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <div class="title">Enter your company email</div>
+          <div class="desc">Use the email your company registered you with (e.g. arjun@company.com)</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <div class="title">Your profile gets linked</div>
+          <div class="desc">We'll automatically connect your account to your employee record</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <div class="title">Access your dashboard</div>
+          <div class="desc">See your attendance, apply for leaves, and track your work stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="form-box">
+      <h2>Create account</h2>
+      <div class="sub">Employee self-registration</div>
+
+      <div class="fg">
+        <label>Username</label>
+        <input type="text" id="username" placeholder="e.g. arjun_sharma"/>
+      </div>
+      <div class="fg">
+        <label>Company Email</label>
+        <input type="email" id="email" placeholder="e.g. arjun@company.com"/>
+        <div class="hint info" id="emailHint" style="display:none"></div>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Min 6 characters"/>
+      </div>
+      <div class="fg">
+        <label>Confirm Password</label>
+        <input type="password" id="confirm" placeholder="Re-enter password"/>
+      </div>
+
+      <div class="err-msg" id="errMsg"></div>
+      <div class="success-msg" id="successMsg"></div>
+
+      <button class="btn-signup" id="signupBtn" onclick="handleSignup()">Create Account →</button>
+      <div class="login-link">Already have an account? <a href="/">Sign in</a></div>
+    </div>
+  </div>
+
+  <script>
+    // Email hint — check if company email pattern
+    document.getElementById('email').addEventListener('input', function() {
+      const hint = document.getElementById('emailHint');
+      const val = this.value;
+      if (val.includes('@company.com')) {
+        hint.textContent = '✓ Looks like a company email — your employee profile will be auto-linked!';
+        hint.style.display = 'block';
+      } else if (val.includes('@') && val.length > 5) {
+        hint.textContent = 'ℹ If your email matches our records, your employee profile will be linked automatically.';
+        hint.style.display = 'block';
+        hint.className = 'hint info';
+      } else {
+        hint.style.display = 'none';
+      }
+    });
+
+    async function handleSignup() {
+      const btn = document.getElementById('signupBtn');
+      const err = document.getElementById('errMsg');
+      const suc = document.getElementById('successMsg');
+
+      const username = document.getElementById('username').value.trim();
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm  = document.getElementById('confirm').value;
+
+      err.classList.remove('show');
+      suc.classList.remove('show');
+
+      if (!username || !email || !password) {
+        err.textContent = 'All fields are required.'; err.classList.add('show'); return;
+      }
+      if (password !== confirm) {
+        err.textContent = 'Passwords do not match.'; err.classList.add('show'); return;
+      }
+      if (password.length < 6) {
+        err.textContent = 'Password must be at least 6 characters.'; err.classList.add('show'); return;
+      }
+
+      btn.textContent = 'Creating account...'; btn.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.clear();
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          if (data.linked_employee) {
+            suc.textContent = `✅ Account created & linked to ${data.linked_employee.full_name}! Redirecting...`;
+          } else {
+            suc.textContent = '✅ Account created! Note: no employee record found for this email. Redirecting...';
+          }
+          suc.classList.add('show');
+          setTimeout(() => { window.location.href = '/employee-dashboard'; }, 1500);
+        } else {
+          err.textContent = data.error || 'Signup failed'; err.classList.add('show');
+        }
+      } catch(e) {
+        err.textContent = 'Could not connect to server.'; err.classList.add('show');
+      }
+
+      btn.textContent = 'Create Account →'; btn.classList.remove('loading');
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignup(); });
+  </script>
+</body>
+</html>

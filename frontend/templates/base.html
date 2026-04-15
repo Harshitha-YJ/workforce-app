@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WorkForce — {% block title %}Dashboard{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1a1a24;
+      --border: #1e1e2e;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --success: #43e97b;
+      --warning: #f9a825;
+      --sidebar-w: 240px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 0;
+      position: fixed; top: 0; left: 0; height: 100vh;
+    }
+    .sidebar .logo {
+      font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800;
+      padding: 0 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar .logo span { color: var(--accent); }
+
+    .nav { flex: 1; padding: 20px 12px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: var(--muted); text-decoration: none;
+      font-size: 0.88rem; font-weight: 500;
+      transition: all 0.15s; cursor: pointer;
+      margin-bottom: 4px;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(108,99,255,0.15); color: var(--accent); }
+    .nav-item .icon { font-size: 1.1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .user-chip {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--accent); display: flex;
+      align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+    }
+    .user-info .name { font-size: 0.85rem; font-weight: 500; }
+    .user-info .role { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Main content */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1; padding: 36px 40px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 700;
+    }
+    .page-header p { color: var(--muted); font-size: 0.88rem; margin-top: 4px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #7b73ff; }
+    .btn-danger { background: rgba(255,101,132,0.15); color: var(--accent2); border: 1px solid rgba(255,101,132,0.3); }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+    /* Badge */
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 500;
+    }
+    .badge-active { background: rgba(67,233,123,0.15); color: var(--success); }
+    .badge-inactive { background: rgba(255,101,132,0.15); color: var(--accent2); }
+    .badge-pending { background: rgba(249,168,37,0.15); color: var(--warning); }
+    .badge-approved { background: rgba(67,233,123,0.15); color: var(--success); }
+    .badge-rejected { background: rgba(255,101,132,0.15); color: var(--accent2); }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 0 16px 12px; text-align: left; }
+    td { padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.88rem; }
+    tr:hover td { background: var(--surface2); }
+
+    /* Logout */
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 0.8rem; cursor: pointer; padding: 4px 0;
+      margin-top: 4px;
+    }
+    .logout-btn:hover { color: var(--accent2); }
+  </style>
+  {% block extra_style %}{% endblock %}
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Work<span>Force</span></div>
+    <nav class="nav">
+      <a class="nav-item {% if page == 'dashboard' %}active{% endif %}" href="/dashboard">
+        <span class="icon">📊</span> Dashboard
+      </a>
+      <a class="nav-item {% if page == 'employees' %}active{% endif %}" href="/employees">
+        <span class="icon">👥</span> Employees
+      </a>
+      <a class="nav-item {% if page == 'attendance' %}active{% endif %}" href="/attendance">
+        <span class="icon">🕐</span> Attendance
+      </a>
+      <a class="nav-item {% if page == 'leave' %}active{% endif %}" href="/leave">
+        <span class="icon">📅</span> Leave Requests
+      </a>
+      <a class="nav-item {% if page == 'reports' %}active{% endif %}" href="/reports">
+        <span class="icon">📄</span> Reports
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="userInitial">A</div>
+        <div class="user-info">
+          <div class="name" id="userName">Admin</div>
+          <div class="role" id="userRole">Admin</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">← Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    // Auth guard
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token) window.location.href = '/';
+
+    // Set user info in sidebar
+    if (user.username) {
+      document.getElementById('userName').textContent = user.username;
+      document.getElementById('userRole').textContent = user.role;
+      document.getElementById('userInitial').textContent = user.username[0].toUpperCase();
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+
+    // Authenticated fetch helper
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...(options.headers || {})
+        }
+      });
+      // 401 = unauthorized, 422 = bad/expired token → force re-login
+      if (res.status === 401 || res.status === 422) {
+        localStorage.clear();
+        window.location.href = '/';
+      }
+      return res;
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WorkForce — My Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg:#0a0a0f; --surface:#13131a; --surface2:#1a1a24; --border:#1e1e2e;
+      --accent:#6c63ff; --accent2:#ff6584; --text:#e8e8f0; --muted:#6b6b80;
+      --success:#43e97b; --warning:#f9a825; --sidebar-w:240px;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
+
+    /* Sidebar */
+    .sidebar { width:var(--sidebar-w); background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:28px 0; position:fixed; top:0; left:0; height:100vh; }
+    .sidebar .logo { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; padding:0 24px 24px; border-bottom:1px solid var(--border); }
+    .sidebar .logo span { color:var(--accent); }
+    .emp-badge { margin:16px 12px; background:rgba(108,99,255,0.08); border:1px solid rgba(108,99,255,0.2); border-radius:10px; padding:12px 14px; }
+    .emp-badge .label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+    .emp-badge .name  { font-size:0.9rem; font-weight:600; color:var(--accent); margin-top:2px; }
+    .emp-badge .dept  { font-size:0.75rem; color:var(--muted); }
+
+    .nav { flex:1; padding:8px 12px; }
+    .nav-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--muted); text-decoration:none; font-size:0.88rem; font-weight:500; transition:all 0.15s; cursor:pointer; margin-bottom:4px; border:none; background:none; width:100%; }
+    .nav-item:hover { background:var(--surface2); color:var(--text); }
+    .nav-item.active { background:rgba(108,99,255,0.15); color:var(--accent); }
+    .nav-item .icon { font-size:1.1rem; width:20px; text-align:center; }
+
+    .sidebar-footer { padding:16px 24px; border-top:1px solid var(--border); }
+    .user-chip { display:flex; align-items:center; gap:10px; }
+    .user-avatar { width:34px; height:34px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; }
+    .user-info .uname { font-size:0.85rem; font-weight:500; }
+    .user-info .urole { font-size:0.7rem; color:var(--muted); text-transform:uppercase; }
+    .logout-btn { background:none; border:none; color:var(--muted); font-size:0.78rem; cursor:pointer; padding:4px 0; margin-top:4px; }
+    .logout-btn:hover { color:var(--accent2); }
+
+    /* Main */
+    .main { margin-left:var(--sidebar-w); flex:1; padding:36px 40px; }
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
+    .page-header h1 { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:700; }
+    .page-header p { color:var(--muted); font-size:0.85rem; margin-top:4px; }
+
+    /* Sections (tabs) */
+    .section { display:none; }
+    .section.active { display:block; }
+
+    /* Stat cards */
+    .stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:28px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; }
+    .stat-card .num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:700; }
+    .stat-card .lbl { color:var(--muted); font-size:0.78rem; margin-top:4px; }
+    .stat-card.green  .num { color:var(--success); }
+    .stat-card.red    .num { color:var(--accent2); }
+    .stat-card.yellow .num { color:var(--warning); }
+    .stat-card.purple .num { color:var(--accent); }
+    .stat-card.blue   .num { color:#38bdf8; }
+
+    /* Profile card */
+    .profile-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; display:flex; gap:24px; align-items:flex-start; margin-bottom:20px; }
+    .profile-avatar { width:72px; height:72px; border-radius:50%; background:rgba(108,99,255,0.2); color:var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:1.4rem; flex-shrink:0; }
+    .profile-info h2 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:700; }
+    .profile-info .designation { color:var(--muted); font-size:0.88rem; margin-top:4px; }
+    .profile-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:16px; }
+    .profile-field .field-label { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+    .profile-field .field-value { font-size:0.88rem; font-weight:500; margin-top:3px; }
+
+    /* Table */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+    table { width:100%; border-collapse:collapse; }
+    th { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); padding:0 16px 12px; text-align:left; }
+    td { padding:14px 16px; border-top:1px solid var(--border); font-size:0.85rem; }
+    tr:hover td { background:var(--surface2); }
+
+    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:500; }
+    .badge-present  { background:rgba(67,233,123,0.15); color:var(--success); }
+    .badge-absent   { background:rgba(255,101,132,0.15); color:var(--accent2); }
+    .badge-late     { background:rgba(108,99,255,0.15); color:var(--accent); }
+    .badge-half-day { background:rgba(249,168,37,0.15); color:var(--warning); }
+    .badge-pending  { background:rgba(249,168,37,0.15); color:var(--warning); }
+    .badge-approved { background:rgba(67,233,123,0.15); color:var(--success); }
+    .badge-rejected { background:rgba(255,101,132,0.15); color:var(--accent2); }
+
+    /* Leave apply form */
+    .leave-form { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; }
+    .leave-form h3 { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; margin-bottom:20px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .fg label { display:block; font-size:0.73rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+    .fg input, .fg select, .fg textarea {
+      width:100%; background:var(--bg); border:1px solid var(--border);
+      border-radius:8px; padding:11px 14px; color:var(--text);
+      font-family:'DM Sans',sans-serif; font-size:0.88rem; outline:none;
+    }
+    .fg input:focus, .fg select:focus, .fg textarea:focus { border-color:var(--accent); }
+    .fg select option { background:var(--surface); }
+    .btn { padding:11px 22px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; border:none; transition:all 0.15s; }
+    .btn-primary { background:var(--accent); color:white; }
+    .btn-primary:hover { background:#7b73ff; }
+
+    .days-preview { background:rgba(108,99,255,0.08); border:1px solid rgba(108,99,255,0.2); border-radius:8px; padding:10px 14px; font-size:0.85rem; color:var(--accent); margin-bottom:16px; display:none; }
+
+    .chart-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:20px; }
+    .chart-wrap h3 { font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700; margin-bottom:20px; }
+
+    .toast { position:fixed; bottom:28px; right:28px; padding:12px 20px; border-radius:10px; font-size:0.85rem; font-weight:600; transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast.ok  { background:var(--success); color:#0a0a0f; }
+    .toast.err { background:var(--accent2); color:white; }
+
+    .no-link-banner { background:rgba(249,168,37,0.08); border:1px solid rgba(249,168,37,0.25); border-radius:12px; padding:20px 24px; color:var(--warning); margin-bottom:20px; }
+    .no-link-banner h3 { font-family:'Syne',sans-serif; font-size:1rem; margin-bottom:6px; }
+    .no-link-banner p  { font-size:0.85rem; line-height:1.6; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Work<span>Force</span></div>
+  <div class="emp-badge">
+    <div class="label">Logged in as</div>
+    <div class="name" id="sidebarName">—</div>
+    <div class="dept" id="sidebarDept">—</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-item active" onclick="showSection('overview', this)"><span class="icon">📊</span> Overview</button>
+    <button class="nav-item" onclick="showSection('profile', this)"><span class="icon">👤</span> My Profile</button>
+    <button class="nav-item" onclick="showSection('attendance', this)"><span class="icon">🕐</span> Attendance</button>
+    <button class="nav-item" onclick="showSection('leaves', this)"><span class="icon">📅</span> My Leaves</button>
+    <button class="nav-item" onclick="showSection('apply', this)"><span class="icon">➕</span> Apply Leave</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar" id="userInitial">E</div>
+      <div class="user-info">
+        <div class="uname" id="userName">Employee</div>
+        <div class="urole">Employee</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">← Logout</button>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <div class="section active" id="sec-overview">
+    <div class="page-header">
+      <div><h1 id="welcomeMsg">Welcome back!</h1><p id="dateStr"></p></div>
+    </div>
+    <div id="noLinkBanner" class="no-link-banner" style="display:none">
+      <h3>⚠️ No employee profile linked</h3>
+      <p>Your account email doesn't match any employee in our system. Contact your admin to get linked. You can still browse but attendance/leave data won't show.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="num" id="ovPresent">—</div><div class="lbl">✅ Present</div></div>
+      <div class="stat-card red"><div class="num" id="ovAbsent">—</div><div class="lbl">❌ Absent</div></div>
+      <div class="stat-card yellow"><div class="num" id="ovLate">—</div><div class="lbl">⏰ Late</div></div>
+      <div class="stat-card purple"><div class="num" id="ovHalf">—</div><div class="lbl">🌗 Half Day</div></div>
+      <div class="stat-card blue"><div class="num" id="ovHours">—</div><div class="lbl">⏱ Total Hours</div></div>
+    </div>
+    <div class="chart-wrap">
+      <h3>My Attendance (Last 30 Days)</h3>
+      <canvas id="myAttChart" height="120"></canvas>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Hours</th></tr></thead>
+        <tbody id="recentAttTable"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="section" id="sec-profile">
+    <div class="page-header"><div><h1>My Profile</h1><p>Your employee details</p></div></div>
+    <div class="profile-card" id="profileCard">
+      <div style="color:var(--muted)">Loading profile...</div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE -->
+  <div class="section" id="sec-attendance">
+    <div class="page-header"><div><h1>My Attendance</h1><p>Full attendance history</p></div></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Hours Worked</th><th>Notes</th></tr></thead>
+        <tbody id="fullAttTable"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MY LEAVES -->
+  <div class="section" id="sec-leaves">
+    <div class="page-header"><div><h1>My Leaves</h1><p>All your leave applications</p></div></div>
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card yellow"><div class="num" id="lvPending">—</div><div class="lbl">⏳ Pending</div></div>
+      <div class="stat-card green"><div class="num" id="lvApproved">—</div><div class="lbl">✅ Approved</div></div>
+      <div class="stat-card red"><div class="num" id="lvRejected">—</div><div class="lbl">❌ Rejected</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied On</th></tr></thead>
+        <tbody id="leavesTable"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- APPLY LEAVE -->
+  <div class="section" id="sec-apply">
+    <div class="page-header"><div><h1>Apply for Leave</h1><p>Submit a new leave request</p></div></div>
+    <div class="leave-form">
+      <h3>New Leave Application</h3>
+      <div class="form-row">
+        <div class="fg">
+          <label>Leave Type</label>
+          <select id="a_type">
+            <option value="casual">Casual Leave</option>
+            <option value="sick">Sick Leave</option>
+            <option value="annual">Annual Leave</option>
+            <option value="unpaid">Unpaid Leave</option>
+          </select>
+        </div>
+        <div class="fg" style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label>From Date</label>
+            <input type="date" id="a_from" oninput="calcDays()"/>
+          </div>
+          <div style="flex:1">
+            <label>To Date</label>
+            <input type="date" id="a_to" oninput="calcDays()"/>
+          </div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:16px">
+        <label>Reason</label>
+        <textarea id="a_reason" rows="3" placeholder="Briefly explain your reason for leave..."></textarea>
+      </div>
+      <div class="days-preview" id="daysPreview"></div>
+      <button class="btn btn-primary" onclick="applyLeave()">Submit Application</button>
+    </div>
+  </div>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+  const token = localStorage.getItem('token');
+  const user  = JSON.parse(localStorage.getItem('user') || '{}');
+  if (!token) window.location.href = '/';
+  // Redirect admin to admin dashboard
+  if (user.role === 'admin') window.location.href = '/dashboard';
+
+  Chart.defaults.color = '#6b6b80';
+  Chart.defaults.borderColor = '#1e1e2e';
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+  let myChart = null;
+  let empProfile = null;
+
+  // Set user info in sidebar
+  document.getElementById('userName').textContent   = user.username || 'Employee';
+  document.getElementById('userInitial').textContent = (user.username || 'E')[0].toUpperCase();
+  document.getElementById('dateStr').textContent = new Date().toLocaleDateString('en-IN',
+    {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  async function apiFetch(url, opts={}) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}`, ...(opts.headers||{}) }
+    });
+    if (res.status === 401 || res.status === 422) { localStorage.clear(); window.location.href='/'; }
+    return res;
+  }
+
+  function logout() { localStorage.clear(); window.location.href='/'; }
+
+  function showSection(name, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(`sec-${name}`).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'attendance') loadFullAttendance();
+    if (name === 'leaves')     loadMyLeaves();
+    if (name === 'profile')    loadProfile();
+  }
+
+  async function loadAll() {
+    // Load profile
+    const meRes = await apiFetch('/api/auth/me');
+    const me = await meRes.json();
+
+    if (me.employee) {
+      empProfile = me.employee;
+      document.getElementById('sidebarName').textContent = empProfile.full_name || `${empProfile.first_name} ${empProfile.last_name}`;
+      document.getElementById('sidebarDept').textContent = `${empProfile.department} · ${empProfile.designation}`;
+      document.getElementById('welcomeMsg').textContent  = `Welcome, ${empProfile.first_name}! 👋`;
+      document.getElementById('noLinkBanner').style.display = 'none';
+    } else {
+      document.getElementById('sidebarName').textContent = user.username;
+      document.getElementById('sidebarDept').textContent = 'Not linked';
+      document.getElementById('noLinkBanner').style.display = 'block';
+    }
+
+    // Load attendance stats
+    const statsRes = await apiFetch('/api/attendance/my-stats');
+    if (statsRes.ok) {
+      const s = await statsRes.json();
+      document.getElementById('ovPresent').textContent = s.present;
+      document.getElementById('ovAbsent').textContent  = s.absent;
+      document.getElementById('ovLate').textContent    = s.late;
+      document.getElementById('ovHalf').textContent    = s.half_day;
+      document.getElementById('ovHours').textContent   = s.total_hours + 'h';
+    }
+
+    // Load recent attendance & chart
+    const attRes = await apiFetch('/api/attendance/my-attendance');
+    if (attRes.ok) {
+      const records = await attRes.json();
+      renderAttTable(records.slice(0,7), 'recentAttTable', 5);
+      buildMyChart(records.slice(0,14).reverse());
+    }
+  }
+
+  function renderAttTable(records, tbodyId, cols) {
+    const tbody = document.getElementById(tbodyId);
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:30px">No records found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = records.map(r => `
+      <tr>
+        <td>${new Date(r.date).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</td>
+        <td><span class="badge badge-${r.status}">${r.status}</span></td>
+        <td>${r.check_in || '—'}</td>
+        <td>${r.check_out || '—'}</td>
+        <td>${r.hours_worked || 0}h</td>
+        ${cols===6 ? `<td style="color:var(--muted)">${r.notes||'—'}</td>` : ''}
+      </tr>`).join('');
+  }
+
+  function buildMyChart(records) {
+    if (myChart) myChart.destroy();
+    const colorMap = { present:'rgba(67,233,123,0.8)', absent:'rgba(255,101,132,0.8)', late:'rgba(108,99,255,0.8)', 'half-day':'rgba(249,168,37,0.8)' };
+    const ctx = document.getElementById('myAttChart').getContext('2d');
+    myChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: records.map(r => new Date(r.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})),
+        datasets: [{
+          label: 'Status',
+          data: records.map(r => r.hours_worked || (r.status==='absent'?0:r.status==='half-day'?4:8)),
+          backgroundColor: records.map(r => colorMap[r.status] || 'rgba(108,99,255,0.5)'),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{display:false} },
+        scales:{
+          x:{ grid:{color:'#1e1e2e'} },
+          y:{ grid:{color:'#1e1e2e'}, beginAtZero:true, max:10,
+              ticks:{ callback: v => v+'h' } }
+        }
+      }
+    });
+  }
+
+  async function loadFullAttendance() {
+    const res = await apiFetch('/api/attendance/my-attendance');
+    if (res.ok) renderAttTable(await res.json(), 'fullAttTable', 6);
+  }
+
+  async function loadProfile() {
+    const res = await apiFetch('/api/auth/me');
+    const me  = await res.json();
+    const emp = me.employee;
+    const card = document.getElementById('profileCard');
+
+    if (!emp) {
+      card.innerHTML = `<div class="no-link-banner" style="width:100%"><h3>⚠️ No employee profile linked</h3><p>Contact your admin to link your account to an employee record.</p></div>`;
+      return;
+    }
+
+    const initials = emp.first_name[0] + emp.last_name[0];
+    card.innerHTML = `
+      <div class="profile-avatar">${initials}</div>
+      <div class="profile-info" style="flex:1">
+        <h2>${emp.first_name} ${emp.last_name}</h2>
+        <div class="designation">${emp.designation} · ${emp.department}</div>
+        <div class="profile-grid">
+          <div class="profile-field"><div class="field-label">Employee ID</div><div class="field-value">${emp.employee_id}</div></div>
+          <div class="profile-field"><div class="field-label">Email</div><div class="field-value">${emp.email}</div></div>
+          <div class="profile-field"><div class="field-label">Phone</div><div class="field-value">${emp.phone||'—'}</div></div>
+          <div class="profile-field"><div class="field-label">Department</div><div class="field-value">${emp.department}</div></div>
+          <div class="profile-field"><div class="field-label">Designation</div><div class="field-value">${emp.designation}</div></div>
+          <div class="profile-field"><div class="field-label">Salary</div><div class="field-value">₹${Number(emp.salary).toLocaleString('en-IN')}/month</div></div>
+          <div class="profile-field"><div class="field-label">Status</div><div class="field-value"><span class="badge badge-${emp.status}">${emp.status}</span></div></div>
+          <div class="profile-field"><div class="field-label">Joined</div><div class="field-value">${emp.date_of_joining||'—'}</div></div>
+          <div class="profile-field"><div class="field-label">Login</div><div class="field-value">${me.username}</div></div>
+        </div>
+      </div>`;
+  }
+
+  async function loadMyLeaves() {
+    const res = await apiFetch('/api/leave/my-leaves');
+    if (!res.ok) return;
+    const leaves = await res.json();
+    document.getElementById('lvPending').textContent  = leaves.filter(l=>l.status==='pending').length;
+    document.getElementById('lvApproved').textContent = leaves.filter(l=>l.status==='approved').length;
+    document.getElementById('lvRejected').textContent = leaves.filter(l=>l.status==='rejected').length;
+    const tbody = document.getElementById('leavesTable');
+    tbody.innerHTML = leaves.length ? leaves.map(l => `
+      <tr>
+        <td><span style="text-transform:capitalize">${l.leave_type}</span></td>
+        <td>${new Date(l.from_date).toLocaleDateString('en-IN')}</td>
+        <td>${new Date(l.to_date).toLocaleDateString('en-IN')}</td>
+        <td>${l.days_count}</td>
+        <td style="color:var(--muted)">${l.reason||'—'}</td>
+        <td><span class="badge badge-${l.status}">${l.status}</span></td>
+        <td style="color:var(--muted)">${new Date(l.applied_on).toLocaleDateString('en-IN')}</td>
+      </tr>`).join('') :
+      '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No leave applications yet</td></tr>';
+  }
+
+  function calcDays() {
+    const from = document.getElementById('a_from').value;
+    const to   = document.getElementById('a_to').value;
+    const prev = document.getElementById('daysPreview');
+    if (from && to) {
+      const days = Math.floor((new Date(to)-new Date(from))/86400000)+1;
+      prev.style.display = days > 0 ? 'block' : 'none';
+      if (days > 0) prev.textContent = `📅 ${days} day${days>1?'s':''} selected`;
+    }
+  }
+
+  async function applyLeave() {
+    const from   = document.getElementById('a_from').value;
+    const to     = document.getElementById('a_to').value;
+    const type   = document.getElementById('a_type').value;
+    const reason = document.getElementById('a_reason').value;
+    if (!from || !to) { showToast('Please select both dates', false); return; }
+    if (new Date(to) < new Date(from)) { showToast('End date must be after start date', false); return; }
+
+    const res = await apiFetch('/api/leave/my-apply', {
+      method:'POST', body: JSON.stringify({ leave_type:type, from_date:from, to_date:to, reason })
+    });
+    if (res.ok) {
+      showToast('✅ Leave application submitted!', true);
+      document.getElementById('a_from').value = '';
+      document.getElementById('a_to').value = '';
+      document.getElementById('a_reason').value = '';
+      document.getElementById('daysPreview').style.display='none';
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to apply', false);
+    }
+  }
+
+  function showToast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = `toast ${ok?'ok':'err'} show`;
+    setTimeout(() => t.className='toast', 3000);
+  }
+
+  loadAll();
+</script>
+</body>
+</html>

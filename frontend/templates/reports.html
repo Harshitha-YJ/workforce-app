@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% set page = "reports" %}
+{% block title %}Reports{% endblock %}
+
+{% block extra_style %}
+<style>
+  .reports-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-bottom:36px; }
+
+  .report-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:32px 28px;
+    display:flex; flex-direction:column; gap:16px;
+    transition:border-color 0.2s, transform 0.15s;
+    position:relative; overflow:hidden;
+  }
+  .report-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    border-radius:20px 20px 0 0;
+  }
+  .report-card.purple::before { background:var(--accent); }
+  .report-card.green::before  { background:var(--success); }
+  .report-card.yellow::before { background:var(--warning); }
+  .report-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+
+  .report-card .icon-wrap {
+    width:52px; height:52px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5rem;
+  }
+  .report-card.purple .icon-wrap { background:rgba(108,99,255,0.15); }
+  .report-card.green  .icon-wrap { background:rgba(67,233,123,0.15); }
+  .report-card.yellow .icon-wrap { background:rgba(249,168,37,0.15); }
+
+  .report-card h3 { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700; margin:0; }
+  .report-card p  { color:var(--muted); font-size:0.83rem; line-height:1.6; margin:0; flex:1; }
+
+  .report-card .meta {
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .meta-pill {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:20px; padding:3px 10px;
+    font-size:0.72rem; color:var(--muted);
+  }
+
+  .download-btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 0; border-radius:10px;
+    font-family:'Syne',sans-serif; font-size:0.88rem; font-weight:600;
+    cursor:pointer; border:none; transition:all 0.2s; width:100%;
+    text-decoration:none;
+  }
+  .report-card.purple .download-btn { background:var(--accent); color:white; }
+  .report-card.green  .download-btn { background:rgba(67,233,123,0.85); color:#0a0a0f; }
+  .report-card.yellow .download-btn { background:rgba(249,168,37,0.85); color:#0a0a0f; }
+  .download-btn:hover { opacity:0.88; transform:translateY(-1px); }
+  .download-btn.loading { opacity:0.6; pointer-events:none; }
+
+  /* How it works section */
+  .how-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; }
+  .how-section h3 { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; margin-bottom:20px; }
+  .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .step { text-align:center; }
+  .step .step-num {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(108,99,255,0.15); color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem;
+    margin:0 auto 10px;
+  }
+  .step .step-title { font-size:0.85rem; font-weight:500; margin-bottom:4px; }
+  .step .step-desc  { font-size:0.75rem; color:var(--muted); line-height:1.5; }
+  .step-arrow { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:1.2rem; padding-top:10px; }
+
+  .toast { position:fixed; bottom:28px; right:28px; padding:12px 20px; border-radius:10px;
+    font-size:0.85rem; font-weight:600; transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.ok  { background:var(--success); color:#0a0a0f; }
+  .toast.err { background:var(--accent2); color:white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Reports</h1>
+    <p>Download PDF reports for your records and college submission</p>
+  </div>
+</div>
+
+<div class="reports-grid">
+
+  <!-- Employee Report -->
+  <div class="report-card purple">
+    <div class="icon-wrap">📋</div>
+    <h3>Employee Directory</h3>
+    <p>Complete list of all employees with their department, designation, salary, and current status.</p>
+    <div class="meta">
+      <span class="meta-pill">All employees</span>
+      <span class="meta-pill">Salary info</span>
+      <span class="meta-pill">Department-wise</span>
+    </div>
+    <button class="download-btn" onclick="downloadReport('employees', this)">
+      ⬇ Download PDF
+    </button>
+  </div>
+
+  <!-- Attendance Report -->
+  <div class="report-card green">
+    <div class="icon-wrap">🕐</div>
+    <h3>Attendance Report</h3>
+    <p>Last 10 days attendance records with check-in/out times, hours worked, and daily status.</p>
+    <div class="meta">
+      <span class="meta-pill">Last 10 days</span>
+      <span class="meta-pill">Check-in/out</span>
+      <span class="meta-pill">Status summary</span>
+    </div>
+    <button class="download-btn" onclick="downloadReport('attendance', this)">
+      ⬇ Download PDF
+    </button>
+  </div>
+
+  <!-- Leave Report -->
+  <div class="report-card yellow">
+    <div class="icon-wrap">📅</div>
+    <h3>Leave Requests Report</h3>
+    <p>All leave applications with type, duration, approval status, and submission dates.</p>
+    <div class="meta">
+      <span class="meta-pill">All leaves</span>
+      <span class="meta-pill">Approval status</span>
+      <span class="meta-pill">Leave types</span>
+    </div>
+    <button class="download-btn" onclick="downloadReport('leaves', this)">
+      ⬇ Download PDF
+    </button>
+  </div>
+
+</div>
+
+<!-- How it works -->
+<div class="how-section">
+  <h3>How PDF Reports Work</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Click Download</div>
+      <div class="step-desc">Click any report button above to request the PDF</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Flask generates it</div>
+      <div class="step-desc">Python's ReportLab library builds the PDF from live DB data</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Auto download</div>
+      <div class="step-desc">Browser downloads the PDF file automatically</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-title">Open & submit</div>
+      <div class="step-desc">Use for your college report or internship documentation</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function downloadReport(type, btn) {
+    const original = btn.innerHTML;
+    btn.innerHTML = '⏳ Generating...';
+    btn.classList.add('loading');
+
+    try {
+      const res = await fetch(`/api/reports/${type}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+      // Trigger download
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `workforce_${type}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('✅ Report downloaded!', true);
+    } catch(e) {
+      showToast('❌ Failed: ' + e.message, false);
+    }
+
+    btn.innerHTML = original;
+    btn.classList.remove('loading');
+  }
+
+  function showToast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${ok?'ok':'err'} show`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+</script>
+{% endblock %}

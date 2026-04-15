@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WorkForce — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --border: #1e1e2e;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --success: #43e97b;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left decorative panel */
+    .panel-left {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px;
+      overflow: hidden;
+    }
+
+    .panel-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(108,99,255,0.15) 0%, transparent 70%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.1) 0%, transparent 50%);
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 1;
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      margin-top: 40px;
+      position: relative;
+      z-index: 1;
+    }
+    .tagline h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1px;
+    }
+    .tagline h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .tagline p {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      max-width: 380px;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 40px;
+      margin-top: 60px;
+      position: relative;
+      z-index: 1;
+    }
+    .stat { }
+    .stat .num {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat .label { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+
+    /* Floating cards */
+    .float-card {
+      position: absolute;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 0.8rem;
+      z-index: 2;
+      animation: float 4s ease-in-out infinite;
+    }
+    .float-card.c1 { bottom: 160px; right: 80px; animation-delay: 0s; }
+    .float-card.c2 { bottom: 80px; right: 200px; animation-delay: 1.5s; }
+    .float-card .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 8px;
+    }
+    .dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot.purple { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* Right login panel */
+    .panel-right {
+      width: 440px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 48px;
+    }
+
+    .login-box { width: 100%; }
+
+    .login-box h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .login-box p { color: var(--muted); margin-top: 8px; font-size: 0.9rem; }
+
+    .form-group { margin-top: 28px; }
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .form-group input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
+    }
+    .form-group input::placeholder { color: var(--muted); }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(108,99,255,0.08);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+    .hint code { color: var(--accent); font-size: 0.78rem; }
+
+    .btn-login {
+      margin-top: 32px;
+      width: 100%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 15px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-login:hover {
+      background: #7b73ff;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(108,99,255,0.4);
+    }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login.loading { opacity: 0.7; pointer-events: none; }
+
+    .error-msg {
+      margin-top: 16px;
+      background: rgba(255,101,132,0.1);
+      border: 1px solid rgba(255,101,132,0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--accent2);
+      font-size: 0.85rem;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    @media (max-width: 768px) {
+      .panel-left { display: none; }
+      .panel-right { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="panel-left">
+    <div class="grid-bg"></div>
+
+    <div class="logo">Work<span>Force</span></div>
+
+    <div class="tagline">
+      <h1>Manage your<br>team <em>smarter</em>,<br>not harder.</h1>
+      <p>A complete employee management platform — track attendance, manage leaves, and monitor team performance all in one place.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="num">5+</div>
+        <div class="label">Employees</div>
+      </div>
+      <div class="stat">
+        <div class="num">3</div>
+        <div class="label">Departments</div>
+      </div>
+      <div class="stat">
+        <div class="num">100%</div>
+        <div class="label">Uptime</div>
+      </div>
+    </div>
+
+    <div class="float-card c1">
+      <span class="dot green"></span> 4 employees checked in today
+    </div>
+    <div class="float-card c2">
+      <span class="dot purple"></span> 1 leave request pending
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="login-box">
+      <h2>Welcome back</h2>
+      <p>Sign in to your admin account</p>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="username" placeholder="Enter username" value="admin" />
+        <div class="hint">Default: <code>admin</code> / <code>admin123</code></div>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password" value="admin123" />
+      </div>
+
+      <div class="error-msg" id="errorMsg">Invalid username or password. Please try again.</div>
+
+      <button class="btn-login" id="loginBtn" onclick="handleLogin()">Sign In →</button>
+        <p style="text-align:center;margin-top:16px;font-size:0.82rem;color:#6b6b80">
+          New employee? <a href="/signup" style="color:#6c63ff;text-decoration:none;font-weight:500">Create account →</a>
+        </p>
+    </div>
+  </div>
+
+  <script>
+    async function handleLogin() {
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('errorMsg');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        err.textContent = 'Please enter username and password.';
+        err.classList.add('show');
+        return;
+      }
+
+      btn.textContent = 'Signing in...';
+      btn.classList.add('loading');
+      err.classList.remove('show');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        let data;
+        try { data = await res.json(); } catch(e) { data = {}; }
+
+        if (res.ok && data.token) {
+          // Clear any stale data first
+          localStorage.clear();
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          // Small delay to ensure storage is written
+          setTimeout(() => { window.location.href = '/dashboard'; }, 100);
+        } else {
+          err.textContent = data.error || `Login failed (status ${res.status})`;
+          err.classList.add('show');
+          btn.textContent = 'Sign In →';
+          btn.classList.remove('loading');
+        }
+      } catch(e) {
+        err.textContent = 'Could not connect to server. Is Flask running?';
+        err.classList.add('show');
+        btn.textContent = 'Sign In →';
+        btn.classList.remove('loading');
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+  </script>
+</body>
+</html>

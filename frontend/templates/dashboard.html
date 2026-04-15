@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% set page = "dashboard" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_style %}
+<style>
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:28px; }
+  .stat-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:24px; position:relative; overflow:hidden;
+  }
+  .stat-card::after {
+    content:''; position:absolute; bottom:-20px; right:-20px;
+    width:80px; height:80px; border-radius:50%;
+    background:rgba(108,99,255,0.06);
+  }
+  .stat-card .icon { font-size:1.6rem; margin-bottom:12px; }
+  .stat-card .num { font-family:'Syne',sans-serif; font-size:2rem; font-weight:700; }
+  .stat-card .label { color:var(--muted); font-size:0.82rem; margin-top:4px; }
+  .stat-card .trend { font-size:0.75rem; margin-top:8px; }
+  .stat-card.purple .num { color:var(--accent); }
+  .stat-card.green  .num { color:var(--success); }
+  .stat-card.yellow .num { color:var(--warning); }
+  .stat-card.red    .num { color:var(--accent2); }
+
+  .charts-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:20px; margin-bottom:20px; }
+  .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
+  .chart-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:24px;
+  }
+  .chart-card h3 {
+    font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700;
+    margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .chart-card h3 span { font-size:0.75rem; color:var(--muted); font-family:'DM Sans',sans-serif; font-weight:400; }
+  .chart-wrap { position:relative; }
+
+  .recent-list { margin-top:4px; }
+  .recent-item {
+    display:flex; align-items:center; gap:12px;
+    padding:11px 0; border-bottom:1px solid var(--border);
+  }
+  .recent-item:last-child { border-bottom:none; }
+  .emp-dot {
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(108,99,255,0.15); color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:700; font-size:0.78rem; flex-shrink:0;
+  }
+  .recent-item .name { font-size:0.85rem; font-weight:500; }
+  .recent-item .sub  { font-size:0.75rem; color:var(--muted); }
+
+  .leave-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--border);
+  }
+  .leave-item:last-child { border-bottom:none; }
+  .leave-item .lname { font-size:0.85rem; font-weight:500; }
+  .leave-item .lmeta { font-size:0.75rem; color:var(--muted); margin-top:2px; }
+  .leave-actions { display:flex; gap:6px; }
+  .mini-approve { background:rgba(67,233,123,0.12); color:var(--success); border:1px solid rgba(67,233,123,0.25); padding:5px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer; }
+  .mini-reject  { background:rgba(255,101,132,0.12); color:var(--accent2);  border:1px solid rgba(255,101,132,0.25); padding:5px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer; }
+
+  .err-banner {
+    background:rgba(255,101,132,0.08); border:1px solid rgba(255,101,132,0.25);
+    border-radius:10px; padding:12px 18px; color:var(--accent2);
+    font-size:0.85rem; margin-bottom:20px; display:none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p id="dateStr"></p>
+  </div>
+</div>
+
+<div class="err-banner" id="errBanner"></div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+  <div class="stat-card purple">
+    <div class="icon">👥</div>
+    <div class="num" id="totalEmp">—</div>
+    <div class="label">Total Employees</div>
+  </div>
+  <div class="stat-card green">
+    <div class="icon">✅</div>
+    <div class="num" id="presentToday">—</div>
+    <div class="label">Present Today</div>
+  </div>
+  <div class="stat-card yellow">
+    <div class="icon">📅</div>
+    <div class="num" id="pendingLeaves">—</div>
+    <div class="label">Pending Leaves</div>
+  </div>
+  <div class="stat-card red">
+    <div class="icon">🏢</div>
+    <div class="num" id="deptCount">—</div>
+    <div class="label">Departments</div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-grid">
+  <!-- Attendance Bar Chart -->
+  <div class="chart-card">
+    <h3>Attendance This Week <span>Last 5 working days</span></h3>
+    <div class="chart-wrap"><canvas id="attendanceChart" height="200"></canvas></div>
+  </div>
+
+  <!-- Department Doughnut -->
+  <div class="chart-card">
+    <h3>Team by Department <span>Headcount</span></h3>
+    <div class="chart-wrap"><canvas id="deptChart" height="200"></canvas></div>
+  </div>
+</div>
+
+<!-- Bottom Row -->
+<div class="bottom-grid">
+  <!-- Recent Employees -->
+  <div class="chart-card">
+    <h3>Recent Employees <a href="/employees" style="color:var(--accent);text-decoration:none;font-size:0.78rem;font-weight:400">View all →</a></h3>
+    <div class="recent-list" id="recentList">Loading...</div>
+  </div>
+
+  <!-- Pending Leaves Quick Action -->
+  <div class="chart-card">
+    <h3>Pending Approvals <a href="/leave" style="color:var(--accent);text-decoration:none;font-size:0.78rem;font-weight:400">View all →</a></h3>
+    <div id="pendingLeaveList">Loading...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  document.getElementById('dateStr').textContent = new Date().toLocaleDateString('en-IN',
+    {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  // Chart.js global defaults to match our dark theme
+  Chart.defaults.color = '#6b6b80';
+  Chart.defaults.borderColor = '#1e1e2e';
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+  let attendanceChart, deptChart;
+
+  async function loadDashboard() {
+    try {
+      const [statsRes, chartRes, empsRes, leavesRes] = await Promise.all([
+        apiFetch('/api/employees/stats'),
+        apiFetch('/api/attendance/chart-data'),
+        apiFetch('/api/employees/'),
+        apiFetch('/api/leave/?status=pending')
+      ]);
+
+      if (!statsRes.ok) throw new Error(`Stats: ${statsRes.status}`);
+
+      const stats  = await statsRes.json();
+      const chartD = await chartRes.json();
+      const emps   = await empsRes.json();
+      const leaves = await leavesRes.json();
+
+      // Stat cards
+      document.getElementById('totalEmp').textContent    = stats.total;
+      document.getElementById('deptCount').textContent   = stats.by_department.length;
+      document.getElementById('pendingLeaves').textContent = leaves.length;
+
+      // Count today's present from chart data
+      const today = chartD[chartD.length - 1];
+      document.getElementById('presentToday').textContent = today ? today.present : 0;
+
+      // Build attendance bar chart
+      buildAttendanceChart(chartD);
+
+      // Build dept doughnut
+      buildDeptChart(stats.by_department);
+
+      // Recent employees
+      document.getElementById('recentList').innerHTML = emps.slice(0,5).map(e => `
+        <div class="recent-item">
+          <div class="emp-dot">${e.first_name[0]}${e.last_name[0]}</div>
+          <div>
+            <div class="name">${e.full_name}</div>
+            <div class="sub">${e.department} · ${e.designation}</div>
+          </div>
+          <span class="badge badge-${e.status}">${e.status}</span>
+        </div>`).join('');
+
+      // Pending leaves quick action
+      if (!leaves.length) {
+        document.getElementById('pendingLeaveList').innerHTML =
+          '<div style="text-align:center;color:var(--muted);padding:30px 0">🎉 No pending requests</div>';
+      } else {
+        document.getElementById('pendingLeaveList').innerHTML = leaves.slice(0,4).map(l => `
+          <div class="leave-item">
+            <div>
+              <div class="lname">Employee #${l.employee_id} · <em>${l.leave_type}</em></div>
+              <div class="lmeta">${l.days_count} day(s) · ${l.from_date}</div>
+            </div>
+            <div class="leave-actions">
+              <button class="mini-approve" onclick="quickAction(${l.id},'approve',this)">✅</button>
+              <button class="mini-reject"  onclick="quickAction(${l.id},'reject',this)">❌</button>
+            </div>
+          </div>`).join('');
+      }
+
+    } catch(e) {
+      const b = document.getElementById('errBanner');
+      b.style.display = 'block';
+      b.textContent = '⚠️ Could not load stats. Error: ' + e.message;
+    }
+  }
+
+  function buildAttendanceChart(data) {
+    if (attendanceChart) attendanceChart.destroy();
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+    attendanceChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.date),
+        datasets: [
+          { label: 'Present',  data: data.map(d => d.present),  backgroundColor: 'rgba(67,233,123,0.7)',  borderRadius: 6 },
+          { label: 'Late',     data: data.map(d => d.late),     backgroundColor: 'rgba(108,99,255,0.7)', borderRadius: 6 },
+          { label: 'Half Day', data: data.map(d => d.half_day), backgroundColor: 'rgba(249,168,37,0.7)', borderRadius: 6 },
+          { label: 'Absent',   data: data.map(d => d.absent),   backgroundColor: 'rgba(255,101,132,0.7)',borderRadius: 6 },
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } } },
+        scales: {
+          x: { stacked: false, grid: { color: '#1e1e2e' } },
+          y: { stacked: false, grid: { color: '#1e1e2e' }, ticks: { stepSize: 1 }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  function buildDeptChart(depts) {
+    if (deptChart) deptChart.destroy();
+    const colors = ['rgba(108,99,255,0.8)','rgba(67,233,123,0.8)','rgba(249,168,37,0.8)',
+                    'rgba(255,101,132,0.8)','rgba(56,189,248,0.8)','rgba(251,146,60,0.8)'];
+    const ctx = document.getElementById('deptChart').getContext('2d');
+    deptChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: depts.map(d => d.department),
+        datasets: [{
+          data: depts.map(d => d.count),
+          backgroundColor: colors.slice(0, depts.length),
+          borderWidth: 2,
+          borderColor: '#13131a',
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } }
+        }
+      }
+    });
+  }
+
+  async function quickAction(id, action, btn) {
+    btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = true);
+    const res = await apiFetch(`/api/leave/${id}/${action}`, { method: 'PUT' });
+    if (res.ok) {
+      btn.closest('.leave-item').style.opacity = '0.4';
+      setTimeout(() => loadDashboard(), 600);
+    }
+  }
+
+  loadDashboard();
+</script>
+{% endblock %}

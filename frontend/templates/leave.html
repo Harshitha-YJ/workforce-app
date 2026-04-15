@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% set page = "leave" %}
+{% block title %}Leave Requests{% endblock %}
+
+{% block extra_style %}
+<style>
+  .tabs { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px; width:fit-content; margin-bottom:28px; }
+  .tab { padding:9px 20px; border-radius:9px; font-size:0.85rem; font-weight:500; cursor:pointer; color:var(--muted); border:none; background:none; transition:all 0.15s; }
+  .tab.active { background:var(--accent); color:white; }
+
+  /* Summary cards */
+  .summary-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  .sum-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 24px; }
+  .sum-card .num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:700; }
+  .sum-card .lbl { color:var(--muted); font-size:0.78rem; margin-top:4px; }
+  .sum-card.pending .num { color:var(--warning); }
+  .sum-card.approved .num { color:var(--success); }
+  .sum-card.rejected .num { color:var(--accent2); }
+  .sum-card.total .num { color:var(--accent); }
+
+  /* Leave request cards */
+  .leave-list { display:flex; flex-direction:column; gap:12px; }
+  .leave-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:20px 24px;
+    display:flex; align-items:center; gap:20px;
+  }
+  .leave-card .emp-dot {
+    width:44px; height:44px; border-radius:50%;
+    background:rgba(108,99,255,0.15); color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-weight:700; font-size:0.85rem;
+    flex-shrink:0;
+  }
+  .leave-card .info { flex:1; }
+  .leave-card .emp-name { font-size:0.92rem; font-weight:500; }
+  .leave-card .meta { font-size:0.78rem; color:var(--muted); margin-top:4px; }
+  .leave-card .reason { font-size:0.82rem; color:var(--muted); margin-top:6px; font-style:italic; }
+  .leave-card .actions { display:flex; gap:8px; flex-shrink:0; }
+
+  .btn-approve { background:rgba(67,233,123,0.15); color:var(--success); border:1px solid rgba(67,233,123,0.3); padding:8px 16px; border-radius:8px; font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.15s; }
+  .btn-approve:hover { background:rgba(67,233,123,0.25); }
+  .btn-reject { background:rgba(255,101,132,0.15); color:var(--accent2); border:1px solid rgba(255,101,132,0.3); padding:8px 16px; border-radius:8px; font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.15s; }
+  .btn-reject:hover { background:rgba(255,101,132,0.25); }
+
+  .leave-type-pill {
+    padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:500;
+    background:rgba(108,99,255,0.1); color:var(--accent); margin-left:8px;
+  }
+
+  /* Apply form */
+  .apply-panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; }
+  .apply-panel h3 { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; margin-bottom:20px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .fg label { display:block; font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+  .fg input, .fg select, .fg textarea {
+    width:100%; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; padding:11px 14px; color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:0.88rem; outline:none; resize:vertical;
+  }
+  .fg input:focus, .fg select:focus, .fg textarea:focus { border-color:var(--accent); }
+  .fg select option { background:var(--surface); }
+
+  .days-preview {
+    background:rgba(108,99,255,0.08); border:1px solid rgba(108,99,255,0.2);
+    border-radius:8px; padding:10px 14px; font-size:0.85rem; color:var(--accent);
+    margin-bottom:16px; display:none;
+  }
+
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-state .icon { font-size:2.5rem; margin-bottom:12px; }
+
+  .toast { position:fixed; bottom:28px; right:28px; padding:12px 20px; border-radius:10px;
+    font-size:0.85rem; font-weight:600; transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.ok { background:var(--success); color:#0a0a0f; }
+  .toast.err { background:var(--accent2); color:white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Leave Requests</h1>
+    <p>Manage and track employee leave applications</p>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-row">
+  <div class="sum-card pending"><div class="num" id="cntPending">—</div><div class="lbl">⏳ Pending</div></div>
+  <div class="sum-card approved"><div class="num" id="cntApproved">—</div><div class="lbl">✅ Approved</div></div>
+  <div class="sum-card rejected"><div class="num" id="cntRejected">—</div><div class="lbl">❌ Rejected</div></div>
+  <div class="sum-card total"><div class="num" id="cntTotal">—</div><div class="lbl">📋 Total</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('pending', this)">⏳ Pending</button>
+  <button class="tab" onclick="switchTab('all', this)">📋 All Requests</button>
+  <button class="tab" onclick="switchTab('apply', this)">➕ Apply Leave</button>
+</div>
+
+<!-- PENDING TAB -->
+<div id="tab-pending">
+  <div class="leave-list" id="pendingList">
+    <div style="color:var(--muted);padding:20px">Loading...</div>
+  </div>
+</div>
+
+<!-- ALL REQUESTS TAB -->
+<div id="tab-all" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Type</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Days</th>
+          <th>Status</th>
+          <th>Applied On</th>
+        </tr>
+      </thead>
+      <tbody id="allTable">
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- APPLY LEAVE TAB -->
+<div id="tab-apply" style="display:none">
+  <div class="apply-panel">
+    <h3>Apply for Leave</h3>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Employee</label>
+        <select id="a_emp"><option value="">Select employee...</option></select>
+      </div>
+      <div class="fg">
+        <label>Leave Type</label>
+        <select id="a_type">
+          <option value="casual">Casual Leave</option>
+          <option value="sick">Sick Leave</option>
+          <option value="annual">Annual Leave</option>
+          <option value="unpaid">Unpaid Leave</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid-3">
+      <div class="fg">
+        <label>From Date</label>
+        <input type="date" id="a_from" oninput="calcDays()"/>
+      </div>
+      <div class="fg">
+        <label>To Date</label>
+        <input type="date" id="a_to" oninput="calcDays()"/>
+      </div>
+      <div class="fg">
+        <label>Reason</label>
+        <input type="text" id="a_reason" placeholder="Brief reason..."/>
+      </div>
+    </div>
+    <div class="days-preview" id="daysPreview"></div>
+    <button class="btn btn-primary" onclick="applyLeave()" style="min-width:160px">Submit Application</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let employees = [];
+  let allLeaves = [];
+
+  async function loadAll() {
+    const [empRes, leaveRes] = await Promise.all([
+      apiFetch('/api/employees/'),
+      apiFetch('/api/leave/')
+    ]);
+    employees = await empRes.json();
+    allLeaves = await leaveRes.json();
+
+    // Populate employee dropdown
+    document.getElementById('a_emp').innerHTML =
+      '<option value="">Select employee...</option>' +
+      employees.map(e => `<option value="${e.id}">${e.full_name} — ${e.department}</option>`).join('');
+
+    // Update counts
+    document.getElementById('cntPending').textContent = allLeaves.filter(l=>l.status==='pending').length;
+    document.getElementById('cntApproved').textContent = allLeaves.filter(l=>l.status==='approved').length;
+    document.getElementById('cntRejected').textContent = allLeaves.filter(l=>l.status==='rejected').length;
+    document.getElementById('cntTotal').textContent = allLeaves.length;
+
+    renderPending();
+    renderAll();
+  }
+
+  const empMap = () => Object.fromEntries(employees.map(e => [e.id, e]));
+
+  function getInitials(emp) {
+    return emp ? emp.first_name[0] + emp.last_name[0] : '??';
+  }
+
+  function renderPending() {
+    const map = empMap();
+    const pending = allLeaves.filter(l => l.status === 'pending');
+    const container = document.getElementById('pendingList');
+
+    if (!pending.length) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">🎉</div><div>No pending leave requests!</div></div>`;
+      return;
+    }
+
+    container.innerHTML = pending.map(l => {
+      const emp = map[l.employee_id];
+      const initials = getInitials(emp);
+      const name = emp ? emp.full_name : `Employee #${l.employee_id}`;
+      const dept = emp ? emp.department : '';
+      return `
+        <div class="leave-card" id="leave-${l.id}">
+          <div class="emp-dot">${initials}</div>
+          <div class="info">
+            <div class="emp-name">
+              ${name}
+              <span class="leave-type-pill">${l.leave_type}</span>
+            </div>
+            <div class="meta">
+              📅 ${formatDate(l.from_date)} → ${formatDate(l.to_date)}
+              &nbsp;·&nbsp; ${l.days_count} day${l.days_count>1?'s':''}
+              &nbsp;·&nbsp; ${dept}
+            </div>
+            ${l.reason ? `<div class="reason">"${l.reason}"</div>` : ''}
+          </div>
+          <div class="actions">
+            <button class="btn-approve" onclick="updateLeave(${l.id},'approve')">✅ Approve</button>
+            <button class="btn-reject" onclick="updateLeave(${l.id},'reject')">❌ Reject</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderAll() {
+    const map = empMap();
+    const tbody = document.getElementById('allTable');
+    if (!allLeaves.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">No leave requests yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allLeaves.map(l => {
+      const emp = map[l.employee_id];
+      const name = emp ? emp.full_name : `Employee #${l.employee_id}`;
+      const badgeClass = {pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected'}[l.status] || 'badge-pending';
+      return `<tr>
+        <td><strong>${name}</strong></td>
+        <td><span class="leave-type-pill" style="margin:0">${l.leave_type}</span></td>
+        <td>${formatDate(l.from_date)}</td>
+        <td>${formatDate(l.to_date)}</td>
+        <td>${l.days_count}</td>
+        <td><span class="badge ${badgeClass}">${l.status}</span></td>
+        <td>${new Date(l.applied_on).toLocaleDateString('en-IN')}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function updateLeave(id, action) {
+    const res = await apiFetch(`/api/leave/${id}/${action}`, { method: 'PUT' });
+    if (res.ok) {
+      showToast(action === 'approve' ? '✅ Leave approved!' : '❌ Leave rejected!', action === 'approve');
+      await loadAll();
+    } else {
+      showToast('Action failed', false);
+    }
+  }
+
+  function calcDays() {
+    const from = document.getElementById('a_from').value;
+    const to = document.getElementById('a_to').value;
+    const preview = document.getElementById('daysPreview');
+    if (from && to) {
+      const days = Math.floor((new Date(to) - new Date(from)) / 86400000) + 1;
+      if (days > 0) {
+        preview.style.display = 'block';
+        preview.textContent = `📅 ${days} day${days>1?'s':''} of leave selected`;
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+  }
+
+  async function applyLeave() {
+    const empId = document.getElementById('a_emp').value;
+    const from = document.getElementById('a_from').value;
+    const to = document.getElementById('a_to').value;
+    if (!empId || !from || !to) { showToast('Please fill all required fields', false); return; }
+    if (new Date(to) < new Date(from)) { showToast('To date must be after From date', false); return; }
+
+    const body = {
+      employee_id: parseInt(empId),
+      leave_type: document.getElementById('a_type').value,
+      from_date: from, to_date: to,
+      reason: document.getElementById('a_reason').value
+    };
+
+    const res = await apiFetch('/api/leave/', { method: 'POST', body: JSON.stringify(body) });
+    if (res.ok) {
+      showToast('✅ Leave application submitted!', true);
+      document.getElementById('a_reason').value = '';
+      document.getElementById('a_from').value = '';
+      document.getElementById('a_to').value = '';
+      document.getElementById('daysPreview').style.display = 'none';
+      await loadAll();
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to apply', false);
+    }
+  }
+
+  function switchTab(name, btn) {
+    ['pending','all','apply'].forEach(t => document.getElementById(`tab-${t}`).style.display='none');
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${name}`).style.display = 'block';
+    btn.classList.add('active');
+  }
+
+  function formatDate(d) {
+    return new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+  }
+
+  function showToast(msg, ok=true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${ok?'ok':'err'} show`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  loadAll();
+</script>
+{% endblock %}

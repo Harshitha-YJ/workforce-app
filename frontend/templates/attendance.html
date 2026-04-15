@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% set page = "attendance" %}
+{% block title %}Attendance{% endblock %}
+
+{% block extra_style %}
+<style>
+  .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; width: fit-content; margin-bottom: 28px; }
+  .tab { padding: 9px 20px; border-radius: 9px; font-size: 0.85rem; font-weight: 500; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.15s; }
+  .tab.active { background: var(--accent); color: white; }
+
+  /* Today's Overview */
+  .attendance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .att-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .att-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(108,99,255,0.15); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .att-info { flex: 1; min-width: 0; }
+  .att-info .name { font-size: 0.88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .att-info .dept { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .att-status { text-align: right; flex-shrink: 0; }
+  .att-time { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+
+  /* Mark Attendance Panel */
+  .mark-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+  .mark-panel h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 20px; }
+  .mark-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .fg label { display: block; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .fg select, .fg input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none;
+  }
+  .fg select:focus, .fg input:focus { border-color: var(--accent); }
+  .fg select option { background: var(--surface); }
+
+  .status-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .chip {
+    padding: 8px 18px; border-radius: 30px; font-size: 0.82rem; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg);
+    color: var(--muted); transition: all 0.15s;
+  }
+  .chip.selected-present { background: rgba(67,233,123,0.15); border-color: var(--success); color: var(--success); }
+  .chip.selected-absent { background: rgba(255,101,132,0.15); border-color: var(--accent2); color: var(--accent2); }
+  .chip.selected-half-day { background: rgba(249,168,37,0.15); border-color: var(--warning); color: var(--warning); }
+  .chip.selected-late { background: rgba(108,99,255,0.15); border-color: var(--accent); color: var(--accent); }
+
+  /* Summary bar */
+  .summary-bar {
+    display: flex; gap: 20px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 24px; margin-bottom: 24px;
+  }
+  .sum-item { text-align: center; }
+  .sum-item .num { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 700; }
+  .sum-item .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .sum-item.present .num { color: var(--success); }
+  .sum-item.absent .num { color: var(--accent2); }
+  .sum-item.late .num { color: var(--accent); }
+  .sum-item.halfday .num { color: var(--warning); }
+  .sum-divider { width: 1px; background: var(--border); margin: 0 4px; }
+
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--success); color: #0a0a0f;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 0.85rem; font-weight: 600;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { background: var(--accent2); color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Attendance</h1>
+    <p id="todayDate">Loading...</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview', this)">📋 Today's Overview</button>
+  <button class="tab" onclick="switchTab('mark', this)">✏️ Mark Attendance</button>
+  <button class="tab" onclick="switchTab('history', this)">📅 History</button>
+</div>
+
+<!-- TODAY OVERVIEW TAB -->
+<div id="tab-overview">
+  <div class="summary-bar">
+    <div class="sum-item present"><div class="num" id="sumPresent">—</div><div class="lbl">Present</div></div>
+    <div class="sum-divider"></div>
+    <div class="sum-item absent"><div class="num" id="sumAbsent">—</div><div class="lbl">Absent</div></div>
+    <div class="sum-divider"></div>
+    <div class="sum-item late"><div class="num" id="sumLate">—</div><div class="lbl">Late</div></div>
+    <div class="sum-divider"></div>
+    <div class="sum-item halfday"><div class="num" id="sumHalf">—</div><div class="lbl">Half Day</div></div>
+    <div class="sum-divider"></div>
+    <div class="sum-item"><div class="num" id="sumNot" style="color:var(--muted)">—</div><div class="lbl">Not Marked</div></div>
+  </div>
+  <div class="attendance-grid" id="todayGrid">
+    <div style="color:var(--muted);padding:20px">Loading...</div>
+  </div>
+</div>
+
+<!-- MARK ATTENDANCE TAB -->
+<div id="tab-mark" style="display:none">
+  <div class="mark-panel">
+    <h3>Mark Attendance</h3>
+    <div class="mark-grid">
+      <div class="fg">
+        <label>Employee</label>
+        <select id="m_emp"><option value="">Select employee...</option></select>
+      </div>
+      <div class="fg">
+        <label>Date</label>
+        <input type="date" id="m_date" />
+      </div>
+      <div class="fg">
+        <label>Hours Worked</label>
+        <input type="number" id="m_hours" placeholder="8" min="0" max="24" step="0.5"/>
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:16px">
+      <label>Status</label>
+      <div class="status-chips" id="statusChips">
+        <div class="chip" onclick="selectStatus('present', this)">✅ Present</div>
+        <div class="chip" onclick="selectStatus('absent', this)">❌ Absent</div>
+        <div class="chip" onclick="selectStatus('half-day', this)">🌗 Half Day</div>
+        <div class="chip" onclick="selectStatus('late', this)">⏰ Late</div>
+      </div>
+    </div>
+
+    <div class="mark-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fg">
+        <label>Check In</label>
+        <input type="time" id="m_checkin" value="09:00"/>
+      </div>
+      <div class="fg">
+        <label>Check Out</label>
+        <input type="time" id="m_checkout" value="18:00"/>
+      </div>
+      <div class="fg">
+        <label>Notes (optional)</label>
+        <input type="text" id="m_notes" placeholder="Any remarks..."/>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="markAttendance()" style="min-width:160px">Mark Attendance</button>
+  </div>
+</div>
+
+<!-- HISTORY TAB -->
+<div id="tab-history" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Hours</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable">
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let selectedStatus = 'present';
+  let employees = [];
+
+  // Set today's date
+  const today = new Date();
+  document.getElementById('todayDate').textContent = today.toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  document.getElementById('m_date').value = today.toISOString().split('T')[0];
+
+  // Select status chip
+  function selectStatus(status, el) {
+    selectedStatus = status;
+    document.querySelectorAll('.chip').forEach(c => c.className = 'chip');
+    el.className = `chip selected-${status}`;
+  }
+  // Auto-select present
+  document.querySelector('.chip').click();
+
+  function switchTab(name, btn) {
+    ['overview','mark','history'].forEach(t => document.getElementById(`tab-${t}`).style.display = 'none');
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${name}`).style.display = 'block';
+    btn.classList.add('active');
+    if (name === 'overview') loadOverview();
+    if (name === 'history') loadHistory();
+  }
+
+  function showToast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast${isError?' error':''} show`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  const statusBadge = s => {
+    const map = {present:'active', absent:'inactive', 'half-day':'pending', late:'pending'};
+    return `<span class="badge badge-${map[s]||'pending'}">${s}</span>`;
+  };
+
+  async function loadEmployees() {
+    const res = await apiFetch('/api/employees/');
+    employees = await res.json();
+    const sel = document.getElementById('m_emp');
+    sel.innerHTML = '<option value="">Select employee...</option>' +
+      employees.map(e => `<option value="${e.id}">${e.full_name} — ${e.department}</option>`).join('');
+  }
+
+  async function loadOverview() {
+    const res = await apiFetch('/api/attendance/summary');
+    const data = await res.json();
+
+    let present=0, absent=0, late=0, half=0, notMarked=0;
+    document.getElementById('todayGrid').innerHTML = data.map(({employee: e, today: att}) => {
+      let status = 'not marked', badgeClass = 'badge-pending';
+      let timeStr = '';
+      if (att) {
+        status = att.status;
+        if(status==='present'){present++;badgeClass='badge-active';}
+        else if(status==='absent'){absent++;badgeClass='badge-inactive';}
+        else if(status==='late'){late++;badgeClass='badge-pending';}
+        else if(status==='half-day'){half++;badgeClass='badge-pending';}
+        if (att.check_in) timeStr = `In: ${att.check_in}${att.check_out ? ' · Out: '+att.check_out : ''}`;
+      } else { notMarked++; }
+
+      return `<div class="att-card">
+        <div class="att-avatar">${e.first_name[0]}${e.last_name[0]}</div>
+        <div class="att-info">
+          <div class="name">${e.full_name}</div>
+          <div class="dept">${e.department}</div>
+        </div>
+        <div class="att-status">
+          <span class="badge ${badgeClass}">${status}</span>
+          <div class="att-time">${timeStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('sumPresent').textContent = present;
+    document.getElementById('sumAbsent').textContent = absent;
+    document.getElementById('sumLate').textContent = late;
+    document.getElementById('sumHalf').textContent = half;
+    document.getElementById('sumNot').textContent = notMarked;
+  }
+
+  async function markAttendance() {
+    const empId = document.getElementById('m_emp').value;
+    const date = document.getElementById('m_date').value;
+    if (!empId || !date) { showToast('Please select employee and date', true); return; }
+
+    const body = {
+      employee_id: parseInt(empId),
+      date,
+      status: selectedStatus,
+      check_in: document.getElementById('m_checkin').value,
+      check_out: document.getElementById('m_checkout').value,
+      hours_worked: parseFloat(document.getElementById('m_hours').value) || 8,
+      notes: document.getElementById('m_notes').value
+    };
+
+    const res = await apiFetch('/api/attendance/', { method: 'POST', body: JSON.stringify(body) });
+    if (res.ok) {
+      showToast('✅ Attendance marked successfully!');
+      document.getElementById('m_notes').value = '';
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to mark attendance', true);
+    }
+  }
+
+  async function loadHistory() {
+    const res = await apiFetch('/api/attendance/');
+    const records = await res.json();
+    const empMap = Object.fromEntries(employees.map(e => [e.id, e.full_name]));
+
+    document.getElementById('historyTable').innerHTML = records.length ? records.map(r => `
+      <tr>
+        <td>${empMap[r.employee_id] || `Emp #${r.employee_id}`}</td>
+        <td>${new Date(r.date).toLocaleDateString('en-IN')}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${r.check_in || '—'}</td>
+        <td>${r.check_out || '—'}</td>
+        <td>${r.hours_worked || '—'}h</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">No records yet</td></tr>';
+  }
+
+  loadEmployees().then(() => loadOverview());
+</script>
+{% endblock %}
