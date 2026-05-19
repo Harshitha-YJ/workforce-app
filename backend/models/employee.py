@@ -19,8 +19,8 @@ class Employee(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
-    attendance_records = db.relationship('Attendance', backref='employee', lazy=True)
-    leave_requests = db.relationship('Leave', backref='employee', lazy=True)
+    attendance_records = db.relationship('Attendance', backref='employee', lazy=True, cascade="all, delete-orphan")
+    leave_requests = db.relationship('Leave', backref='employee', lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
